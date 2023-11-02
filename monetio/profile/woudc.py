@@ -10,113 +10,132 @@ import io
 
 import pandas as pd
 
-# Archive files
-base_url = "https://woudc.org/archive/Summaries/dataset-snapshots/"
 
-dates = pd.date_range("2019-08-01", "2019-08-02")
-# which = "totalozoneobs"
-which = "ozonesonde"
-url = f"{base_url}{which}.zip"
+def get_archive(dates=None, which="ozonesonde"):
+    """Load WOUDC archive data.
 
-print(f"Loading WOUDC {which} archive...")
-df = pd.read_csv(url, dtype=str, delimiter=",", engine="c", low_memory=False)
+    From https://woudc.org/archive/Summaries/dataset-snapshots
 
-if which == "ozonesonde":
-    # NOTE: 2.1 GB zipped, takes a while to load
-    # NOTE: 'flight_plot_path' has URL to ozonesonde profile plot if available
-    float_cols = [
-        "flight_summary_integratedo3",
-        "flight_summary_sondetotalo3",
-        "flight_summary_correctionfactor",
-        "flight_summary_totalo3",
-    ]
-    int_cols = []
-    bool_cols = ["latest_observation"]
-    date_cols = ["instance_datetime", "generation_datetime"]
-    data_block_pref = "ozonesonde_"
-elif which == "totalozone":
-    float_cols = [
-        "X",
-        "Y",
-        "monthly_columno3",
-        "monthly_stddevo3",
-        "daily_columno3",
-        "daily_stddevo3",
-        "daily_utc_begin",
-        "daily_utc_end",
-        "daily_utc_mean",
-        "daily_mmu",
-        "daily_columnso2",
-    ]
-    int_cols = ["monthly_npts", "daily_nobs"]
-    bool_cols = ["latest_observation"]
-    date_cols = ["instance_datetime", "monthly_date", "daily_date"]
-    data_block_pref = None
-elif which == "totalozoneobs":
-    float_cols = ["X", "Y", "daily_summary_meano3", "daily_summary_stddevo3"]
-    int_cols = ["daily_summary_nobs"]
-    bool_cols = ["latest_observation"]  # seems to be all 0 and 1
-    date_cols = ["instance_datetime"]
-    data_block_pref = "ozone_"
-else:
-    raise ValueError(f"WOUDC archive ID {which!r} invalid or not implemented.")
+    Parameters
+    ----------
+    dates : array-like of datetime-like, optional
+        Dates corresponding to the desired period of interest.
+        Default: return full archive.
+    which : {'ozonesonde', 'totalozone', 'totalozoneobs'}
+        Which data archive to get.
 
-print("Converting dtypes...")
-# NOTE: It seems that the float cols are not clean, so simple `astype` doesn't work.
-for col in float_cols:
-    df[col] = pd.to_numeric(df[col], errors="coerce")
-for col in int_cols:
-    # NOTE: generally can't be int dtype since missing values
-    df[col] = pd.to_numeric(df[col], errors="coerce")
-for col in bool_cols:
-    df[col] = df[col].astype(bool)
-for col in date_cols:
-    df[col] = pd.to_datetime(df[col], errors="coerce")
-    if df[col].dt.tz is not None:
-        df[col] = df[col].dt.tz_convert("UTC").dt.tz_localize(None)
+    Returns
+    -------
+    pandas.DataFrame
+        'data_block's expanded if present.
+    """
+    base_url = "https://woudc.org/archive/Summaries/dataset-snapshots/"
 
-df = df.rename(columns={"X": "longitude", "Y": "latitude", "gaw_id": "siteid"})
+    url = f"{base_url}{which}.zip"
 
-date_min, date_max = dates.min(), dates.max()
-df = df[df.instance_datetime.between(date_min, date_max, inclusive="both")]
+    print(f"Loading WOUDC {which} archive...")
+    df = pd.read_csv(url, dtype=str, delimiter=",", engine="c", low_memory=False)
 
-if "data_block" in df.columns:
-    # totalozoneobs has a column of CSV strings ('data_block')
-    # - Time  (without date)
-    # - WLcode
-    # - ObsCode
-    # - Airmass
-    # - ColumnO3
-    # - StdDevO3
-    # - ColumnSO2
-    # - StdDevSO2
-    # - ZA
-    # - NdFilter
-    # - TempC
-    # - F324
+    if which == "ozonesonde":
+        # NOTE: 2.1 GB zipped, takes a while to load
+        # NOTE: 'flight_plot_path' has URL to ozonesonde profile plot if available
+        float_cols = [
+            "flight_summary_integratedo3",
+            "flight_summary_sondetotalo3",
+            "flight_summary_correctionfactor",
+            "flight_summary_totalo3",
+        ]
+        int_cols = []
+        bool_cols = ["latest_observation"]
+        date_cols = ["instance_datetime", "generation_datetime"]
+        data_block_pref = "ozonesonde_"
+    elif which == "totalozone":
+        float_cols = [
+            "X",
+            "Y",
+            "monthly_columno3",
+            "monthly_stddevo3",
+            "daily_columno3",
+            "daily_stddevo3",
+            "daily_utc_begin",
+            "daily_utc_end",
+            "daily_utc_mean",
+            "daily_mmu",
+            "daily_columnso2",
+        ]
+        int_cols = ["monthly_npts", "daily_nobs"]
+        bool_cols = ["latest_observation"]
+        date_cols = ["instance_datetime", "monthly_date", "daily_date"]
+        data_block_pref = None
+    elif which == "totalozoneobs":
+        float_cols = ["X", "Y", "daily_summary_meano3", "daily_summary_stddevo3"]
+        int_cols = ["daily_summary_nobs"]
+        bool_cols = ["latest_observation"]  # seems to be all 0 and 1
+        date_cols = ["instance_datetime"]
+        data_block_pref = "ozone_"
+    else:
+        raise ValueError(f"WOUDC archive ID {which!r} invalid or not implemented.")
 
-    # ozonesonde 'data_block' columns:
-    # - Pressure
-    # - O3PartialPressure
-    # - Temperature
-    # - WindSpeed
-    # - WindDirection
-    # - LevelCode
-    # - Duration
-    # - GPHeight
-    # - RelativeHumidity
-    # - SampleTemperature
+    print("Converting dtypes...")
+    # NOTE: It seems that the float cols are not clean, so simple `astype` doesn't work.
+    for col in float_cols:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    for col in int_cols:
+        # NOTE: generally can't be int dtype since missing values
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    for col in bool_cols:
+        df[col] = df[col].astype(bool)
+    for col in date_cols:
+        df[col] = pd.to_datetime(df[col], errors="coerce")
+        if df[col].dt.tz is not None:
+            df[col] = df[col].dt.tz_convert("UTC").dt.tz_localize(None)
 
-    print("Expanding data blocks...")
-    data = []
-    for i in range(len(df)):
-        # TODO: dtypes (e.g. 'time' -> timedelta)
-        data_i = pd.read_csv(io.StringIO(df.data_block.iloc[i]))
-        data_i["data_payload_id"] = df.data_payload_id.iloc[i]
-        data.append(data_i)
-    data = pd.concat(data, ignore_index=True)
-    data = data.rename(
-        columns=lambda col: f"{data_block_pref}{col.lower()}" if col != "data_payload_id" else col
-    )
+    df = df.rename(columns={"X": "longitude", "Y": "latitude", "gaw_id": "siteid"})
 
-    df = data.merge(df.drop(columns=["data_block"]), how="left", on="data_payload_id")
+    if dates is not None:
+        df = df[df.instance_datetime.between(dates.min(), dates.max(), inclusive="both")]
+
+    if "data_block" in df.columns:
+        # totalozoneobs has a column of CSV strings ('data_block')
+        # - Time  (without date)
+        # - WLcode
+        # - ObsCode
+        # - Airmass
+        # - ColumnO3
+        # - StdDevO3
+        # - ColumnSO2
+        # - StdDevSO2
+        # - ZA
+        # - NdFilter
+        # - TempC
+        # - F324
+
+        # ozonesonde 'data_block' columns:
+        # - Pressure
+        # - O3PartialPressure
+        # - Temperature
+        # - WindSpeed
+        # - WindDirection
+        # - LevelCode
+        # - Duration
+        # - GPHeight
+        # - RelativeHumidity
+        # - SampleTemperature
+
+        print("Expanding data blocks...")
+        data = []
+        for i in range(len(df)):
+            # TODO: dtypes (e.g. 'time' -> timedelta)
+            data_i = pd.read_csv(io.StringIO(df.data_block.iloc[i]))
+            data_i["data_payload_id"] = df.data_payload_id.iloc[i]
+            data.append(data_i)
+        data = pd.concat(data, ignore_index=True)
+        data = data.rename(
+            columns=lambda col: f"{data_block_pref}{col.lower()}"
+            if col != "data_payload_id"
+            else col
+        )
+
+        df = data.merge(df.drop(columns=["data_block"]), how="left", on="data_payload_id")
+
+    return df
