@@ -6,18 +6,35 @@ Primary website: https://woudc.org/data/dataset_info.php?id=ozonesonde
 Data access: https://woudc.org/archive/
 
 """
+import io
+
 import pandas as pd
 
 # Archive files
 base_url = "https://woudc.org/archive/Summaries/dataset-snapshots/"
 
-which = "totalozone"
+dates = pd.date_range("2019-08-01", "2019-08-02")
+# which = "totalozoneobs"
+which = "ozonesonde"
 url = f"{base_url}{which}.zip"
 
 print(f"Loading WOUDC {which} archive...")
 df = pd.read_csv(url, dtype=str, delimiter=",", engine="c", low_memory=False)
 
-if which == "totalozone":
+if which == "ozonesonde":
+    # NOTE: 2.1 GB zipped, takes a while to load
+    # NOTE: 'flight_plot_path' has URL to ozonesonde profile plot if available
+    float_cols = [
+        "flight_summary_integratedo3",
+        "flight_summary_sondetotalo3",
+        "flight_summary_correctionfactor",
+        "flight_summary_totalo3",
+    ]
+    int_cols = []
+    bool_cols = ["latest_observation"]
+    date_cols = ["instance_datetime", "generation_datetime"]
+    data_block_pref = "ozonesonde_"
+elif which == "totalozone":
     float_cols = [
         "X",
         "Y",
@@ -34,13 +51,15 @@ if which == "totalozone":
     int_cols = ["monthly_npts", "daily_nobs"]
     bool_cols = ["latest_observation"]
     date_cols = ["instance_datetime", "monthly_date", "daily_date"]
+    data_block_pref = None
 elif which == "totalozoneobs":
     float_cols = ["X", "Y", "daily_summary_meano3", "daily_summary_stddevo3"]
     int_cols = ["daily_summary_nobs"]
     bool_cols = ["latest_observation"]  # seems to be all 0 and 1
-    date_cols = [
-        "instance_datetime",
-    ]
+    date_cols = ["instance_datetime"]
+    data_block_pref = "ozone_"
+else:
+    raise ValueError(f"WOUDC archive ID {which!r} invalid or not implemented.")
 
 print("Converting dtypes...")
 # NOTE: It seems that the float cols are not clean, so simple `astype` doesn't work.
@@ -58,17 +77,46 @@ for col in date_cols:
 
 df = df.rename(columns={"X": "longitude", "Y": "latitude", "gaw_id": "siteid"})
 
-# totalozoneobs has a column of CSV strings ('data_block')
-# Could process _after_ selecting time period of interest using 'instance_datetime'(?)
-# - Time  (without date)
-# - WLcode
-# - ObsCode
-# - Airmass
-# - ColumnO3
-# - StdDevO3
-# - ColumnSO2
-# - StdDevSO2
-# - ZA
-# - NdFilter
-# - TempC
-# - F324
+date_min, date_max = dates.min(), dates.max()
+df = df[df.instance_datetime.between(date_min, date_max, inclusive="both")]
+
+if "data_block" in df.columns:
+    # totalozoneobs has a column of CSV strings ('data_block')
+    # - Time  (without date)
+    # - WLcode
+    # - ObsCode
+    # - Airmass
+    # - ColumnO3
+    # - StdDevO3
+    # - ColumnSO2
+    # - StdDevSO2
+    # - ZA
+    # - NdFilter
+    # - TempC
+    # - F324
+
+    # ozonesonde 'data_block' columns:
+    # - Pressure
+    # - O3PartialPressure
+    # - Temperature
+    # - WindSpeed
+    # - WindDirection
+    # - LevelCode
+    # - Duration
+    # - GPHeight
+    # - RelativeHumidity
+    # - SampleTemperature
+
+    print("Expanding data blocks...")
+    data = []
+    for i in range(len(df)):
+        # TODO: dtypes (e.g. 'time' -> timedelta)
+        data_i = pd.read_csv(io.StringIO(df.data_block.iloc[i]))
+        data_i["data_payload_id"] = df.data_payload_id.iloc[i]
+        data.append(data_i)
+    data = pd.concat(data, ignore_index=True)
+    data = data.rename(
+        columns=lambda col: f"{data_block_pref}{col.lower()}" if col != "data_payload_id" else col
+    )
+
+    df = data.merge(df.drop(columns=["data_block"]), how="left", on="data_payload_id")
