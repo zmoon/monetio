@@ -7,6 +7,7 @@ Data access: https://woudc.org/archive/
 
 """
 import io
+import warnings
 
 import pandas as pd
 
@@ -139,3 +140,59 @@ def get_archive(dates=None, which="ozonesonde"):
         df = data.merge(df.drop(columns=["data_block"]), how="left", on="data_payload_id")
 
     return df
+
+
+def get_available_dates(*, n_threads=10):
+    """Of individual ozonesonde files, in
+    https://woudc.org/archive/Archive-NewFormat/OzoneSonde_1.0_1/
+    """
+    import re
+    from multiprocessing.pool import ThreadPool
+
+    import requests
+
+    url = "https://woudc.org/archive/Archive-NewFormat/OzoneSonde_1.0_1/"
+
+    # Get subdirectories (sites)
+    r = requests.get(url)
+    r.raise_for_status()
+    text = r.text
+    sites = re.findall(r'alt="\[DIR\]"></td><td><a href="([^"]+)/">\1/</a>', text)
+
+    # Discover CSV directories
+    def get_dirs(site):
+        r = requests.get(url + site + "/")
+        r.raise_for_status()
+        text = r.text.replace("%20", " ")
+        group_dirs = re.findall(r'alt="\[DIR\]"></td><td><a href="([^"]+)/">\1/</a>', text)
+        if not group_dirs:
+            warnings.warn(f"No group directories found for {site} ({r.url}).")
+
+        dirs = []
+        for subdir in group_dirs:
+            r = requests.get(url + site + "/" + subdir + "/")
+            r.raise_for_status()
+            text = r.text  # .replace("%20", " ")
+            year_dirs = re.findall(r'alt="\[DIR\]"></td><td><a href="([^"]+)/">\1/</a>', text)
+            if not year_dirs:
+                warnings.warn(f"No year directories found for {site}/{subdir} ({r.url}).")
+            dirs.extend(r.url + year + "/" for year in year_dirs)
+
+        return dirs
+
+    pool = ThreadPool(processes=n_threads)
+    dirs = list(pool.imap_unordered(get_dirs, sites))
+    print(dirs)
+
+    # Discover CSV files
+
+    # for year in year_dirs:
+    #     print(year)
+    #     r = requests.get(url + site + "/" + subdir + "/" + year + "/")
+    #     r.raise_for_status()
+    #     text = r.text.replace("%20", " ")
+    #     files = re.findall(r'href="([^"]+\.csv)">\1</a>', text)
+    #     print(files)
+
+
+get_available_dates()
