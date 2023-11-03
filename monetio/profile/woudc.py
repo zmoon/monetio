@@ -146,6 +146,7 @@ def get_available_dates(*, n_threads=10):
     """Of individual ozonesonde files, in
     https://woudc.org/archive/Archive-NewFormat/OzoneSonde_1.0_1/
     """
+    import itertools
     import re
     from multiprocessing.pool import ThreadPool
 
@@ -165,7 +166,7 @@ def get_available_dates(*, n_threads=10):
         r.raise_for_status()
         text = r.text.replace("%20", " ")
         group_dirs = re.findall(r'alt="\[DIR\]"></td><td><a href="([^"]+)/">\1/</a>', text)
-        if not group_dirs:
+        if site not in {"stn459"} and not group_dirs:
             warnings.warn(f"No group directories found for {site} ({r.url}).")
 
         dirs = []
@@ -181,18 +182,22 @@ def get_available_dates(*, n_threads=10):
         return dirs
 
     pool = ThreadPool(processes=n_threads)
-    dirs = list(pool.imap_unordered(get_dirs, sites))
-    print(dirs)
+    dirs = list(itertools.chain.from_iterable(pool.imap_unordered(get_dirs, sites)))
 
-    # Discover CSV files
+    def get_file_urls(page_dir):
+        r = requests.get(page_dir)
+        r.raise_for_status()
+        text = r.text.replace("%20", " ")
+        files = re.findall(r'href="([^"]+\.(csv|CSV|12|wodc|OS1))">\1</a>', text)
+        if not files:
+            warnings.warn(f"No file URLs detected on page {r.url}")
 
-    # for year in year_dirs:
-    #     print(year)
-    #     r = requests.get(url + site + "/" + subdir + "/" + year + "/")
-    #     r.raise_for_status()
-    #     text = r.text.replace("%20", " ")
-    #     files = re.findall(r'href="([^"]+\.csv)">\1</a>', text)
-    #     print(files)
+        return files
+
+    files = list(itertools.chain.from_iterable(pool.imap_unordered(get_file_urls, dirs)))
+    pool.close()
+
+    print(len(files), "files")
 
 
 get_available_dates()
