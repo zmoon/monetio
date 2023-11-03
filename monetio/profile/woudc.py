@@ -188,16 +188,16 @@ def get_available_dates(*, n_threads=10):
         r = requests.get(page_dir)
         r.raise_for_status()
         text = r.text.replace("%20", " ")
-        files = re.findall(r'href="([^"]+\.(csv|CSV|12|wodc|OS1))">\1</a>', text)
-        if not files:
+        filenames = re.findall(r'href="([^"]+\.(?:csv|CSV|12|wodc|OS1))">\1</a>', text)
+        if not filenames:
             warnings.warn(f"No file URLs detected on page {r.url}")
 
-        return files
+        return [page_dir + file for file in filenames]
 
-    files = list(itertools.chain.from_iterable(pool.imap_unordered(get_file_urls, dirs)))
+    file_urls = sorted(itertools.chain.from_iterable(pool.imap_unordered(get_file_urls, dirs)))
     pool.close()
 
-    print(len(files), "files")
+    print(len(file_urls), "files")
 
 
 get_available_dates()
