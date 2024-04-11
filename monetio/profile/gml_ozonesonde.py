@@ -40,7 +40,7 @@ def retry(func):
     return wrapper
 
 
-PLACES = [
+LOCATIONS = [
     "Boulder, Colorado",
     "Hilo, Hawaii",
     "Huntsville, Alabama",
@@ -54,37 +54,37 @@ PLACES = [
 ]
 
 
-_FILES_L100_CACHE = {place: None for place in PLACES}
+_FILES_L100_CACHE = {location: None for location in LOCATIONS}
 
 
-def discover_files(place=None, *, n_threads=3, cache=True):
+def discover_files(location=None, *, n_threads=3, cache=True):
     import itertools
     from multiprocessing.pool import ThreadPool
 
     base = "https://gml.noaa.gov/aftp/data/ozwv/Ozonesonde"
 
-    if place is None:
-        places = PLACES
-    elif isinstance(place, str):
-        places = [place]
+    if location is None:
+        locations = LOCATIONS
+    elif isinstance(location, str):
+        locations = [location]
     else:
-        places = place
+        locations = location
 
-    invalid = set(places) - set(PLACES)
+    invalid = set(locations) - set(LOCATIONS)
     if invalid:
-        raise ValueError(f"Invalid place(s): {invalid}. Valid options: {PLACES}.")
+        raise ValueError(f"Invalid location(s): {invalid}. Valid options: {LOCATIONS}.")
 
     @retry
-    def get_files(place):
-        cached = _FILES_L100_CACHE[place]
+    def get_files(location):
+        cached = _FILES_L100_CACHE[location]
         if cached is not None:
             return cached
 
-        if place == "South Pole, Antarctica":
-            url_place = "South Pole, Antartica"  # note sp
+        if location == "South Pole, Antarctica":
+            url_location = "South Pole, Antartica"  # note sp
         else:
-            url_place = place
-        url = f"{base}/{url_place}/100 Meter Average Files/".replace(" ", "%20")
+            url_location = location
+        url = f"{base}/{url_location}/100 Meter Average Files/".replace(" ", "%20")
         print(url)
 
         r = requests.get(url, timeout=10)
@@ -103,28 +103,28 @@ def discover_files(place=None, *, n_threads=3, cache=True):
             except ValueError:
                 warnings.warn(f"Failed to parse file name {fn!r} for time.")
                 t = np.nan
-            data.append((place, t, fn, f"{url}{fn}"))
+            data.append((location, t, fn, f"{url}{fn}"))
 
         if not data:
-            warnings.warn(f"No files detected for place {place!r}.")
+            warnings.warn(f"No files detected for location {location!r}.")
 
         return data
 
-    with ThreadPool(processes=min(n_threads, len(places))) as pool:
-        data = list(itertools.chain.from_iterable(pool.imap_unordered(get_files, places)))
+    with ThreadPool(processes=min(n_threads, len(locations))) as pool:
+        data = list(itertools.chain.from_iterable(pool.imap_unordered(get_files, locations)))
 
-    df = pd.DataFrame(data, columns=["place", "time", "fn", "url"])
+    df = pd.DataFrame(data, columns=["location", "time", "fn", "url"])
 
     if cache:
-        for place in places:
-            _FILES_L100_CACHE[place] = list(
-                df[df["place"] == place].itertuples(index=False, name=None)
+        for location in locations:
+            _FILES_L100_CACHE[location] = list(
+                df[df["location"] == location].itertuples(index=False, name=None)
             )
 
     return df
 
 
-def add_data(dates, *, place=None, n_procs=1, errors="raise"):
+def add_data(dates, *, location=None, n_procs=1, errors="raise"):
     """Retrieve and load GML ozonesonde data as a DataFrame.
 
     Parameters
@@ -132,11 +132,11 @@ def add_data(dates, *, place=None, n_procs=1, errors="raise"):
     dates : sequence of datetime-like
         The period between the min and max (both inclusive)
         will be used to select the files to load.
-    place : str or sequence of str, optional
+    location : str or sequence of str, optional
         For example 'Boulder, Colorado'.
-        If not provided, all places will be used.
+        If not provided, all locations will be used.
         Valid options correspond to the directories in https://gml.noaa.gov/aftp/data/ozwv/Ozonesonde/
-        and may include data from more than one unique site ('station').
+        and may include data from more than one unique site (output column 'station').
     n_procs : int
         For Dask.
     errors : {'raise', 'warn', 'skip'}
@@ -152,13 +152,15 @@ def add_data(dates, *, place=None, n_procs=1, errors="raise"):
         raise ValueError(f"Invalid errors setting: {errors!r}.")
 
     print("Discovering files...")
-    df_urls = discover_files(place=place)
+    df_urls = discover_files(location=location)
     print(f"Discovered {len(df_urls)} 100-m files.")
 
     urls = df_urls[df_urls["time"].between(dates_min, dates_max, inclusive="both")]["url"].tolist()
 
     if not urls:
-        raise RuntimeError(f"No files found for dates {dates_min} to {dates_max}, place={place}.")
+        raise RuntimeError(
+            f"No files found for dates {dates_min} to {dates_max}, location={location!r}."
+        )
 
     def func(fp_or_url):
         try:
@@ -208,7 +210,7 @@ def add_data(dates, *, place=None, n_procs=1, errors="raise"):
         "South Pole": "South Pole, Antarctica",
         "Trinidad Head, CA": "Trinidad Head, California",
     }
-    assert set(repl.values()) <= set(PLACES)
+    assert set(repl.values()) <= set(LOCATIONS)
     df["station"] = df["station"].replace(repl)
 
     # Add metadata

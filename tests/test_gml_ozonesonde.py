@@ -7,7 +7,7 @@ from monetio import gml_ozonesonde
 def test_discover_files():
     files = gml_ozonesonde.discover_files()
     assert len(files) > 0
-    assert set(files["place"].unique()) == set(gml_ozonesonde.PLACES)
+    assert set(files["location"].unique()) == set(gml_ozonesonde.LOCATIONS)
 
 
 def test_read_100m():
@@ -74,37 +74,37 @@ def test_add_data():
     assert df["station"].nunique() == latlon.nunique()
 
 
-def test_add_data_place_sel():
+def test_add_data_location_sel():
     dates = pd.date_range("2023-01-01", "2023-01-31 23:59", freq="H")
     df = gml_ozonesonde.add_data(
         dates,
-        place=["Boulder, Colorado", "South Pole, Antarctica"],
+        location=["Boulder, Colorado", "South Pole, Antarctica"],
         n_procs=2,
     )
     assert len(df) > 0
 
     latlon = df["latitude"].astype(str) + "," + df["longitude"].astype(str)
-    assert latlon.nunique() == 2, "selected two places"
+    assert latlon.nunique() == 2, "selected two locations"
 
 
 @pytest.mark.parametrize(
-    "place",
+    "location",
     ["asdf", ["asdf", "blah"], ("asdf", "blah")],
 )
-def test_add_data_invalid_place(place):
+def test_add_data_invalid_location(location):
     dates = pd.date_range("2023-01-01", "2023-01-31 23:59", freq="H")
-    with pytest.raises(ValueError, match="Invalid place"):
-        _ = gml_ozonesonde.add_data(dates, place=place)
+    with pytest.raises(ValueError, match="Invalid location"):
+        _ = gml_ozonesonde.add_data(dates, location=location)
 
 
-def test_same_place_and_launch_time():
+def test_same_location_and_launch_time():
     # Two files with same file time and launch time:
     # - https://gml.noaa.gov/aftp/data/ozwv/Ozonesonde/Boulder,%20Colorado/100%20Meter%20Average%20Files/bl774_2003_03_10_20.l100
     # - https://gml.noaa.gov/aftp/data/ozwv/Ozonesonde/Boulder,%20Colorado/100%20Meter%20Average%20Files/bl775_2003_03_10_20.l100
     # File time: 2003-03-10 20
     # Launch time: 2003-03-10 20:41:11
     dates = ["2003-03-10 20", "2003-03-10 21"]
-    df = gml_ozonesonde.add_data(dates, place="Boulder, Colorado", n_procs=2)
+    df = gml_ozonesonde.add_data(dates, location="Boulder, Colorado", n_procs=2)
     assert len(df) > 0
 
     # Only one launch time
