@@ -71,7 +71,7 @@ def test_add_data():
     assert 1 < latlon.nunique() <= 10, "multiple sites; lat/lon doesn't change in profile"
 
     # NOTE: Similar to the place folder names, but not all the same
-    assert df["station"].nunique() == latlon.nunique()
+    assert df["siteid"].nunique() == latlon.nunique()
 
 
 def test_add_data_location_sel():

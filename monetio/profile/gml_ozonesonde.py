@@ -136,7 +136,7 @@ def add_data(dates, *, location=None, n_procs=1, errors="raise"):
         For example 'Boulder, Colorado'.
         If not provided, all locations will be used.
         Valid options correspond to the directories in https://gml.noaa.gov/aftp/data/ozwv/Ozonesonde/
-        and may include data from more than one unique site (output column 'station').
+        and may include data from more than one unique site (output column 'siteid').
     n_procs : int
         For Dask.
     errors : {'raise', 'warn', 'skip'}
@@ -212,6 +212,9 @@ def add_data(dates, *, location=None, n_procs=1, errors="raise"):
     }
     assert set(repl.values()) <= set(LOCATIONS)
     df["station"] = df["station"].replace(repl)
+
+    # Normalized station name as site ID
+    df = df.rename(columns={"station": "siteid"})
 
     # Add metadata
     if hasattr(df, "attrs"):
