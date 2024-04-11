@@ -135,6 +135,8 @@ def add_data(dates, *, place=None, n_procs=1, errors="raise"):
     place : str or sequence of str, optional
         For example 'Boulder, Colorado'.
         If not provided, all places will be used.
+        Valid options correspond to the directories in https://gml.noaa.gov/aftp/data/ozwv/Ozonesonde/
+        and may include data from more than one unique site ('station').
     n_procs : int
         For Dask.
     errors : {'raise', 'warn', 'skip'}
