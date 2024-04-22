@@ -72,9 +72,16 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
         import h5py
 
         f = h5py.File(fp, "r")
-        data_vars = {k: (v.dims, v[...], v.attrs) for k, v in f.items()}
-        attrs = f.attrs
-        # f.close()
+        data_vars = {
+            k: (
+                tuple(_rename_h5_dim(str(d)) for d in v.dims),
+                v[...],
+                dict(v.attrs),
+            )
+            for k, v in f.items()
+        }
+        attrs = dict(f.attrs)
+        f.close()
     else:
         raise ValueError(f"unrecognized file extension: {ext!r}")
 
@@ -161,6 +168,20 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
         ds = ds.squeeze()
 
     return ds
+
+
+def _rename_h5_dim(s):
+    # e.g. '<"" dimension 0 of HDF5 dataset at 2054726550768>'
+    import re
+
+    s_re = r'<"(.*)" dimension (\d+) of HDF5 dataset at (\d+)>'
+    m = re.fullmatch(s_re, s)
+    if m is None:
+        raise ValueError(f"unexpected str of h5 dim: {s!r}. Expected to match {s_re!r}.")
+
+    label, num, _ = m.groups()
+
+    return f"fakeDim{num}{label}"
 
 
 def _rename_var(vn, *, under="_", dot="_"):
