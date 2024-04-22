@@ -133,6 +133,21 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
     if any(dim.startswith("fakeDim") for dim in unique_dims):
         warnings.warn(f"There are still some fakeDim's around in the set of dims: {unique_dims}")
 
+    # Normalize dtypes
+    for vn, da in ds.variables.items():
+        if da.dtype.kind == "S":
+            ds[vn] = da.astype(str)
+        elif da.dtype.kind == "O":
+            try:
+                x = da.values[0]
+            except IndexError:
+                x = da.item()
+            if isinstance(x, bytes):
+                ds[vn] = da.astype(str)
+        elif da.dtype.kind == "f":
+            if da.dtype.byteorder not in {"=", "|"}:
+                ds[vn] = da.astype(da.dtype.newbyteorder("="))
+
     # Set time and altitude (dims of a LiDAR scan) as coords
     ds = ds.set_coords(list(rename_main_dims))
 
