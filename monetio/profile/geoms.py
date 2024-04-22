@@ -94,13 +94,18 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
     instru_coords = ["LATITUDE.INSTRUMENT", "LONGITUDE.INSTRUMENT", "ALTITUDE.INSTRUMENT"]
     for vn in instru_coords:
         da = ds[vn]
+        if da.ndim == 0:
+            continue
         (dim_name0,) = da.dims
         dim_name = _rename_var(vn)
         ds = ds.set_coords(vn).rename_dims({dim_name0: dim_name})
 
     # Rename time and scan dims
     rename_main_dims = {"DATETIME": "time", "ALTITUDE": "altitude"}
-    for ref, new_dim in rename_main_dims.items():
+    for ref, new_dim in list(rename_main_dims.items()):
+        if ref not in ds:
+            del rename_main_dims[ref]
+            continue
         n = ds[ref].size
         time_dims = [
             dim_name
@@ -129,7 +134,7 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
         warnings.warn(f"There are still some fakeDim's around in the set of dims: {unique_dims}")
 
     # Set time and altitude (dims of a LiDAR scan) as coords
-    ds = ds.set_coords(["DATETIME", "ALTITUDE"])
+    ds = ds.set_coords(list(rename_main_dims))
 
     # Convert time arrays to datetime format
     tstart_from_attr = pd.Timestamp(attrs["DATA_START_DATE"])
@@ -137,12 +142,18 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
     t = _dti_from_mjd2000(ds.DATETIME)
     tlb = _dti_from_mjd2000(ds["DATETIME.START"])  # lower bounds
     tub = _dti_from_mjd2000(ds["DATETIME.STOP"])  # upper
-    assert abs(tstart_from_attr.tz_localize(None) - tlb[0]) < pd.Timedelta(
-        milliseconds=100
-    ), "times should be consistent with DATA_START_DATE attr"
-    assert abs(tstop_from_attr.tz_localize(None) - tub[-1]) < pd.Timedelta(
-        milliseconds=100
-    ), "times should be consistent with DATA_STOP_DATE attr"
+    dt = tstart_from_attr.tz_localize(None) - tlb[0]
+    if not abs(dt) < pd.Timedelta(milliseconds=100):
+        warnings.warn(
+            f"first DATETIME.START ({tlb[0]}) "
+            f"is more than 100 ms from the DATA_START_DATE ({tstart_from_attr})"
+        )
+    dt = tstop_from_attr.tz_localize(None) - tub[-1]
+    if not abs(dt) < pd.Timedelta(milliseconds=100):
+        warnings.warn(
+            f"last DATETIME.STOP ({tub[-1]}) "
+            f"is more than 100 ms from the DATA_STOP_DATE ({tstop_from_attr})"
+        )
     ds["DATETIME"].values = t
     ds["DATETIME.START"].values = tub
     ds["DATETIME.STOP"].values = tlb
