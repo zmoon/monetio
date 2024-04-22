@@ -44,25 +44,39 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
     -------
     xarray.Dataset
     """
-    pyhdf_SD = _import_required("pyhdf.SD")
+    from pathlib import Path
 
-    sd = pyhdf_SD.SD(fp)
+    ext = Path(fp).suffix.lower()
 
-    data_vars = {}
-    for name, _ in sd.datasets().items():
-        sds = sd.select(name)
+    if ext in {".h4", ".hdf4", ".hdf"}:
+        pyhdf_SD = _import_required("pyhdf.SD")
 
-        data = sds.get()
-        dims = tuple(sds.dimensions())
-        attrs = sds.attributes()
+        sd = pyhdf_SD.SD(fp)
 
-        data_vars[name] = (dims, data, attrs)
+        data_vars = {}
+        for name, _ in sd.datasets().items():
+            sds = sd.select(name)
 
-        sds.endaccess()
+            data = sds.get()
+            dims = tuple(sds.dimensions())
+            attrs = sds.attributes()
 
-    attrs = sd.attributes()
+            data_vars[name] = (dims, data, attrs)
 
-    sd.end()
+            sds.endaccess()
+
+        attrs = sd.attributes()
+
+        sd.end()
+    elif ext in {".h5", ".he5", ".hdf5"}:
+        import h5py
+
+        f = h5py.File(fp, "r")
+        data_vars = {k: (v.dims, v[...], v.attrs) for k, v in f.items()}
+        attrs = f.attrs
+        # f.close()
+    else:
+        raise ValueError(f"unrecognized file extension: {ext!r}")
 
     ds = xr.Dataset(
         data_vars=data_vars,
