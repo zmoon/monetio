@@ -66,11 +66,15 @@ def test_pandora_totcol():
     ds = geoms.open_dataset(TEST_FP_PANDORA_NO2_TOTCOL)
 
     assert set(ds.dims) == {"time"}
-    assert set(ds.coords) == {"time"}
+    assert set(ds.coords) == {"time", "altitude_instrument", "latitude", "longitude"}
     assert ds.sizes["time"] > 1
+
+    assert (ds.time.dt.floor("d") == pd.Timestamp("20231206")).all()
 
     assert "no2_column_absorption_solar" in ds.data_vars
 
     assert "altitude" not in ds
-    assert "latitude" not in ds
-    assert "latitude_instrument" in ds
+    assert "latitude_instrument" not in ds and "latitude" in ds, "renamed"
+    assert "longitude_instrument" not in ds and "longitude" in ds, "renamed"
+
+    assert all(vn == vn.lower() and "." not in vn for vn in ds.variables)

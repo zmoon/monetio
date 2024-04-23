@@ -95,6 +95,7 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
     for vn in instru_coords:
         da = ds[vn]
         if da.ndim == 0:
+            ds = ds.set_coords(vn)
             continue
         (dim_name0,) = da.dims
         dim_name = _rename_var(vn)
