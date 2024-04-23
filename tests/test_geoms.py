@@ -63,8 +63,7 @@ def test_cmp_h4tonccf():
 
 
 def test_pandora_totcol():
-    with pytest.warns(match="more than 100 ms"):
-        ds = geoms.open_dataset(TEST_FP_PANDORA_NO2_TOTCOL)
+    ds = geoms.open_dataset(TEST_FP_PANDORA_NO2_TOTCOL)
 
     assert set(ds.dims) == {"time"}
     assert set(ds.coords) == {"time"}

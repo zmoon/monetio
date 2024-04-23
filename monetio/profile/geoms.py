@@ -158,16 +158,16 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
     tlb = _dti_from_mjd2000(ds["DATETIME.START"])  # lower bounds
     tub = _dti_from_mjd2000(ds["DATETIME.STOP"])  # upper
     dt = tstart_from_attr.tz_localize(None) - tlb[0]
-    if not abs(dt) < pd.Timedelta(milliseconds=100):
+    if not abs(dt) < pd.Timedelta(milliseconds=500):
         warnings.warn(
             f"first DATETIME.START ({tlb[0]}) "
-            f"is more than 100 ms from the DATA_START_DATE ({tstart_from_attr})"
+            f"is more than 500 ms from the DATA_START_DATE ({tstart_from_attr})"
         )
     dt = tstop_from_attr.tz_localize(None) - tub[-1]
-    if not abs(dt) < pd.Timedelta(milliseconds=100):
+    if not abs(dt) < pd.Timedelta(milliseconds=500):
         warnings.warn(
             f"last DATETIME.STOP ({tub[-1]}) "
-            f"is more than 100 ms from the DATA_STOP_DATE ({tstop_from_attr})"
+            f"is more than 500 ms from the DATA_STOP_DATE ({tstop_from_attr})"
         )
     ds["DATETIME"].values = t
     ds["DATETIME.START"].values = tub
