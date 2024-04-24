@@ -115,6 +115,14 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
         ]
         ds = ds.rename_dims({dim_name: new_dim for dim_name in time_dims})
 
+    # Squeeze out some unnecessary fakeDims of float vars
+    # Possible for 'PRESSURE_INDEPENDENT' and 'TEMPERATURE_INDEPENDENT'
+    for vn, da in ds.variables.items():
+        if da.ndim >= 1 and da.dims[-1].startswith("fakeDim") and da.dtype.kind == "f":
+            n = da.sizes[da.dims[-1]]
+            if n == 1:
+                ds[vn] = da.squeeze(dim=da.dims[-1])
+
     # Deal with remaining fakeDims
     # 'PRESSURE_INDEPENDENT_SOURCE'
     # 'TEMPERATURE_INDEPENDENT_SOURCE'
@@ -124,17 +132,31 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
     ]
     for vn in remaining_vns:
         da = ds[vn]
-        assert da.dtype.kind == "S"
+        if not da.dtype.kind == "S":
+            continue
         *other_dims, fake_dim = da.dims
         other_dims = tuple(other_dims)
         assert fake_dim.startswith("fakeDim")
         assert not any(d.startswith("fakeDim") for d in other_dims)
-        with xr.set_options(keep_attrs=True):
-            ds[vn] = da.str.join(dim=fake_dim).str.decode("utf-8")
+        if not other_dims:
+            ds[vn] = ((), "".join(c.decode("utf-8") for c in da.values), da.attrs)
+        else:
+            with xr.set_options(keep_attrs=True):
+                ds[vn] = da.str.join(dim=fake_dim).str.decode("utf-8")  # FIXME: 31-char limit?
 
-    unique_dims = {dim for v in ds.variables.values() for dim in v.dims}
-    if any(dim.startswith("fakeDim") for dim in unique_dims):
-        warnings.warn(f"There are still some fakeDim's around in the set of dims: {unique_dims}")
+    unique_dims = set(ds.dims)
+    fake_dims = {dim for dim in unique_dims if dim.startswith("fakeDim")}
+    if fake_dims:
+        from collections import defaultdict
+
+        dim_to_vn = defaultdict(list)
+        for vn in ds.variables:
+            for dim in ds[vn].dims:
+                dim_to_vn[dim].append(vn)
+        fake_dim_info = ", ".join(
+            f"{dim}({ds.sizes[dim]}) [{', '.join(dim_to_vn[dim])}]" for dim in sorted(fake_dims)
+        )
+        warnings.warn(f"There are still some fakeDim's around: {fake_dim_info}")
 
     # Normalize dtypes
     for vn, da in ds.variables.items():
