@@ -135,14 +135,25 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
         if not da.dtype.kind == "S":
             continue
         *other_dims, fake_dim = da.dims
-        other_dims = tuple(other_dims)
+        other_dims = other_dims
         assert fake_dim.startswith("fakeDim")
         assert not any(d.startswith("fakeDim") for d in other_dims)
         if not other_dims:
             ds[vn] = ((), "".join(c.decode("utf-8") for c in da.values), da.attrs)
         else:
-            with xr.set_options(keep_attrs=True):
-                ds[vn] = da.str.join(dim=fake_dim).str.decode("utf-8")  # FIXME: 31-char limit?
+            # Note: This xarray method works but seems to have a 31-char limit?
+            # with xr.set_options(keep_attrs=True):
+            #     ds[vn] = da.str.join(dim=fake_dim).str.decode("utf-8")
+            ds[vn] = (
+                da.str.decode("utf-8")
+                .to_series()
+                .groupby(other_dims)
+                .agg("".join)
+                .to_xarray()
+                .astype(str)
+                .drop_vars(other_dims)  # fake coords at this point
+                .assign_attrs(da.attrs)
+            )
 
     unique_dims = set(ds.dims)
     fake_dims = {dim for dim in unique_dims if dim.startswith("fakeDim")}
