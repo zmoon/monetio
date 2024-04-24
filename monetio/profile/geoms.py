@@ -51,7 +51,7 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
     if ext in {".h4", ".hdf4", ".hdf"}:
         pyhdf_SD = _import_required("pyhdf.SD")
 
-        sd = pyhdf_SD.SD(fp)
+        sd = pyhdf_SD.SD(str(fp))
 
         data_vars = {}
         for name, _ in sd.datasets().items():
