@@ -118,17 +118,19 @@ def open_dataset(fp, *, rename_all=True, squeeze=True):
     # Deal with remaining fakeDims
     # 'PRESSURE_INDEPENDENT_SOURCE'
     # 'TEMPERATURE_INDEPENDENT_SOURCE'
-    # These are '|S1' char arrays that need to be joined to make strings
+    # These are '|S1' char arrays that need to be joined to make strings along the last dim
     remaining_vns = [
         vn for vn, da in ds.variables.items() if any(dim.startswith("fakeDim") for dim in da.dims)
     ]
     for vn in remaining_vns:
         da = ds[vn]
         assert da.dtype.kind == "S"
-        (dim0, dim1) = da.dims
-        assert dim1.startswith("fakeDim") and not dim0.startswith("fakeDim")
-        strings = [b"".join(row).decode() for row in da.values]
-        ds[vn] = ((dim0,), strings, da.attrs)
+        *other_dims, fake_dim = da.dims
+        other_dims = tuple(other_dims)
+        assert fake_dim.startswith("fakeDim")
+        assert not any(d.startswith("fakeDim") for d in other_dims)
+        with xr.set_options(keep_attrs=True):
+            ds[vn] = da.str.join(dim=fake_dim).str.decode("utf-8")
 
     unique_dims = {dim for v in ds.variables.values() for dim in v.dims}
     if any(dim.startswith("fakeDim") for dim in unique_dims):
