@@ -105,7 +105,7 @@ def load_variable(filename, varname):
                 "units": "molec/cm^2",
             },
         )
-    elif varname == "apriori_col" or varname == "apriori_surf" or varname == "pressure_surf":
+    elif varname in {"apriori_col", "apriori_surf", "pressure_surf"}:
         ds[varname] = xr.DataArray(data_loaded, dims=["lon", "lat"], coords=[lon, lat])
     elif varname == "ak_col":
         ds[varname] = xr.DataArray(
@@ -127,8 +127,12 @@ def load_variable(filename, varname):
                 "units": "ppbv",
             },
         )
+    else:
+        raise AssertionError(f"Variable {varname!r} in variable dict but not accounted for.")
+
     # missing value -> nan
     ds[varname] = ds[varname].where(ds[varname] != -9999.0)
+
     return ds
 
 
