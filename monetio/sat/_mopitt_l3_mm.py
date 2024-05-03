@@ -152,15 +152,15 @@ def _add_pressure_variabiles(dataset):
     dataset["pressure"][:, :, :, 9] = dataset["pressure_surf"].values
 
     # Correct for where MOPITT surface pressure <900 hPa
-    ## difference between layer pressure and surface pressure
+    # difference between layer pressure and surface pressure
     diff = xr.full_like(dataset["pressure"], np.nan)
     diff[:, :, :, 0] = 1000
     diff[:, :, :, 1:] = (
         dataset["pressure_surf"].values[:, :, :, None] - dataset["pressure"][:, :, :, :9].values
     )
-    ## add fill values below true surface
+    # add fill values below true surface
     dataset["pressure"] = dataset["pressure"].where(diff > 0)
-    ## replace lowest pressure with surface pressure; broadcast happens in background
+    # replace lowest pressure with surface pressure; broadcast happens in background
     dataset["pressure"].values = (
         dataset["pressure_surf"].where((diff > 0) & (diff < 100), dataset["pressure"]).values
     )
@@ -195,15 +195,15 @@ def _combine_apriori(dataset):
     dataset["apriori_prof"][:, :, :, -1] = dataset["apriori_surf"].values
 
     # As with pressure, correct for where MOPITT surface pressure <900 hPa
-    ## difference between layer pressure and surface pressure
+    # difference between layer pressure and surface pressure
     diff = xr.full_like(dataset["pressure"], np.nan)
     diff[:, :, :, 0] = 1000
     diff[:, :, :, 1:] = (
         dataset["pressure_surf"].values[:, :, :, None] - dataset["pressure"][:, :, :, :9].values
     )
-    ## add fill values below true surface
+    # add fill values below true surface
     dataset["apriori_prof"] = dataset["apriori_prof"].where(diff > 0)
-    ## replace lowest pressure with surface pressure; broadcast happens in background
+    # replace lowest pressure with surface pressure; broadcast happens in background
     dataset["apriori_prof"].values = (
         dataset["apriori_surf"].where((diff > 0) & (diff < 100), dataset["apriori_prof"]).values
     )
