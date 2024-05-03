@@ -136,7 +136,7 @@ def load_variable(filename, varname):
     return ds
 
 
-def _add_pressure_variabiles(dataset):
+def _add_pressure_variables(dataset):
     """Setup 3-D pressure array.
 
     Parameters
@@ -250,10 +250,13 @@ def open_dataset(files, varnames):
             data = data.expand_dims(axis=0, time=[time])
             file_varset.append(data)
 
-        data = xr.merge(file_varset)  # merge variables for file into single dataset
+        # merge variables for file into single dataset
+        data = xr.merge(file_varset)
         if "apriori_prof" in varnames and "pressure_surf" in varnames:
-            data = _add_pressure_variabiles(data)  # add 3-d pressure field
-            data = _combine_apriori(data)  # combine suface and rest of profile into single variable
+            # add 3-d pressure field
+            data = _add_pressure_variables(data)
+            # combine surface and rest of profile into single variable
+            data = _combine_apriori(data)
 
         datasets.append(data)
 
