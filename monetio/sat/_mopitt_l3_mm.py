@@ -219,8 +219,8 @@ def open_dataset(files, varnames):
     files : str or Path or list
         Input file path(s).
         If :class:`str`, shell-style wildcards (e.g. ``*``) will be expanded.
-    varnames : list
-        The variables to load from the MOPITT file.
+    varnames : str or list of str
+        The variable(s) to load from the MOPITT file.
 
     Returns
     -------
@@ -232,6 +232,9 @@ def open_dataset(files, varnames):
         filelist = [files]
     else:
         filelist = files  # assume list
+
+    if isinstance(varnames, str):
+        varnames = [varnames]
 
     datasets = []
     for filename in filelist:
