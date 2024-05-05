@@ -59,7 +59,8 @@ def test_open_dataset(test_file_path):
     ds = open_dataset(test_file_path, {vn: {}})[t_ref.strftime(r"%Y%m%d")]
     assert set(ds.coords) == {"time", "lat", "lon", "scan_time"}
     assert set(ds) == {vn}
-    # assert ds[vn].mean() > 0  # FIXME
+    assert 0 < ds[vn].mean() < 2e-4
+    assert ds[vn].max() < 1e-3
     assert ds.time.ndim == 0
     assert pd.Timestamp(ds.time.values) == t_ref
     assert (ds.scan_time.dt.floor("D") == t_ref).all()

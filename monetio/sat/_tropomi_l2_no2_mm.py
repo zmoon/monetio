@@ -58,9 +58,12 @@ def _open_one_dataset(fname, variable_dict):
 
     for varname in variable_dict:
         print(varname)
-        values = dso.groups["PRODUCT"][varname]
-        # squeeze out 1-dimension
-        values = np.squeeze(values)
+        values_var = dso.groups["PRODUCT"][varname]
+        values = values_var[:].squeeze()
+
+        fv = values_var.getncattr("_FillValue")
+        if fv is not None:
+            values[:][values[:] == fv] = np.nan
 
         if "fillvalue" in variable_dict[varname]:
             fillvalue = variable_dict[varname]["fillvalue"]
@@ -77,7 +80,11 @@ def _open_one_dataset(fname, variable_dict):
             maximum = variable_dict[varname]["maximum"]
             values[:][values[:] > maximum] = np.nan
 
-        ds[varname] = (("y", "x"), values)
+        ds[varname] = (
+            ("y", "x"),
+            values,
+            {"long_name": values_var.long_name, "units": values_var.units},
+        )
 
         if "quality_flag_min" in variable_dict[varname]:
             ds[varname].attrs["quality_flag"] = varname
