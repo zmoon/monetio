@@ -1,5 +1,4 @@
 """Read NASA Suomi NPP OMPS Level 3 Nadir Mapper TO3 file."""
-from pathlib import Path
 
 
 def open_dataset(files):
@@ -16,6 +15,7 @@ def open_dataset(files):
     xarray.Dataset
     """
     from glob import glob
+    from pathlib import Path
 
     import xarray as xr
 
@@ -26,18 +26,12 @@ def open_dataset(files):
     else:
         filelist = files  # assume list
 
-    times = []
     datasets = []
     for filename in filelist:
-        data = _open_one_dataset(filename)
-        times.append(data.attrs.pop("time"))
-        datasets.append(data)
+        ds = _open_one_dataset(filename)
+        datasets.append(ds)
 
-    ds = xr.concat(datasets, dim="time")
-    ds["time"] = (("time"), times)
-    ds = ds.reset_coords().set_coords(["latitude", "longitude", "time"])
-
-    return ds
+    return xr.concat(datasets, dim="time")
 
 
 def _open_one_dataset(fname):
@@ -58,6 +52,7 @@ def _open_one_dataset(fname):
     import xarray as xr
 
     with h5py.File(fname, "r") as f:
+        # Info: https://snpp-omps.gesdisc.eosdis.nasa.gov/data/SNPP_OMPS_Level3/OMPS_NPP_NMTO3_L3_DAILY.2/doc/README.OMPS_NPP_NMTO3_L3_DAILY.2.pdf
         lat = f["Latitude"][:]
         lon = f["Longitude"][:]
         column = f["ColumnAmountO3"][:]
@@ -71,13 +66,17 @@ def _open_one_dataset(fname):
 
     ds = xr.Dataset(
         {
-            "ozone_column": (("time", "y", "x"), column[None, :, :]),
+            "ozone_column": (
+                ("y", "x"),
+                column,
+                {"long_name": "total column ozone amount", "units": "DU"},
+            ),
         },
         coords={
-            "longitude": (("y", "x"), lon_2d),
-            "latitude": (("y", "x"), lat_2d),
+            "longitude": (("y", "x"), lon_2d, {"long_name": "longitude", "units": "degree_east"}),
+            "latitude": (("y", "x"), lat_2d, {"long_name": "latitude", "units": "degree_north"}),
+            "time": ((), time),
         },
-        attrs={"time": time},
     )
 
     return ds
