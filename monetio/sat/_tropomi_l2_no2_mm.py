@@ -127,7 +127,8 @@ def open_dataset(fnames, variable_dict, debug=False):
 
     Returns
     -------
-    xarray.Dataset
+    OrderedDict
+        Dict mapping reference time string (date) to :class:`xarray.Dataset` of the granule.
     """
     if debug:
         logging_level = logging.DEBUG
