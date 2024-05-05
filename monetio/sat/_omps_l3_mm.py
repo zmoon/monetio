@@ -71,11 +71,11 @@ def _open_one_dataset(fname):
 
     ds = xr.Dataset(
         {
-            "ozone_column": (["time", "x", "y"], column[None, :, :]),
+            "ozone_column": (("time", "y", "x"), column[None, :, :]),
         },
         coords={
-            "longitude": (["x", "y"], lon_2d),
-            "latitude": (["x", "y"], lat_2d),
+            "longitude": (("y", "x"), lon_2d),
+            "latitude": (("y", "x"), lat_2d),
         },
         attrs={"time": time},
     )
