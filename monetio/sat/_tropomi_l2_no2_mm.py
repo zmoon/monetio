@@ -5,6 +5,7 @@ import os
 import sys
 from collections import OrderedDict
 from glob import glob
+from pathlib import Path
 
 import numpy as np
 import xarray as xr
@@ -112,6 +113,9 @@ def open_dataset(fnames, variable_dict, debug=False):
     else:
         logging_level = logging.INFO
     logging.basicConfig(stream=sys.stdout, level=logging_level)
+
+    if isinstance(fnames, Path):
+        fnames = fnames.as_posix()
 
     for subpath in fnames.split("/"):
         if "$" in subpath:
