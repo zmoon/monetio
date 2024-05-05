@@ -131,9 +131,7 @@ def open_dataset(fnames, variable_dict, debug=False):
     """
     if debug:
         logging_level = logging.DEBUG
-    else:
-        logging_level = logging.INFO
-    logging.basicConfig(stream=sys.stdout, level=logging_level)
+        logging.basicConfig(stream=sys.stdout, level=logging_level)
 
     if isinstance(fnames, Path):
         fnames = fnames.as_posix()
