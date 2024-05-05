@@ -54,13 +54,21 @@ def test_file_path(tmp_path_factory, worker_id):
 
 
 def test_open_dataset(test_file_path):
-    vn = "nitrogendioxide_tropospheric_column"
+    vn = "nitrogendioxide_tropospheric_column"  # mol m-2
     t_ref = pd.Timestamp("2019-07-15")
+
     ds = open_dataset(test_file_path, {vn: {}})[t_ref.strftime(r"%Y%m%d")]
+
     assert set(ds.coords) == {"time", "lat", "lon", "scan_time"}
     assert set(ds) == {vn}
+
     assert 0 < ds[vn].mean() < 2e-4
     assert ds[vn].max() < 1e-3
+    assert ds[vn].min() < 0
+
     assert ds.time.ndim == 0
     assert pd.Timestamp(ds.time.values) == t_ref
     assert (ds.scan_time.dt.floor("D") == t_ref).all()
+
+    ds2 = open_dataset(test_file_path, {vn: {"minimum": 1e-9}})[t_ref.strftime(r"%Y%m%d")]
+    assert ds2[vn].min() >= 1e-9
