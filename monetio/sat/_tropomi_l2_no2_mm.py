@@ -4,11 +4,13 @@ import logging
 import os
 import sys
 from collections import OrderedDict
+from datetime import datetime
 from glob import glob
 from pathlib import Path
 
 import numpy as np
 import xarray as xr
+from cftime import num2date
 from netCDF4 import Dataset
 
 
@@ -30,17 +32,29 @@ def _open_one_dataset(fname, variable_dict):
 
     dso = Dataset(fname, "r")
 
-    longitude = dso.groups["PRODUCT"]["longitude"]
-    latitude = dso.groups["PRODUCT"]["latitude"]
-    start_time = dso.groups["PRODUCT"]["time"]
+    lon_var = dso.groups["PRODUCT"]["longitude"]
+    lat_var = dso.groups["PRODUCT"]["latitude"]
 
-    # squeeze 1-dimension
-    longitude = np.squeeze(longitude)
-    latitude = np.squeeze(latitude)
-    start_time = np.squeeze(start_time)
+    ref_time_var = dso.groups["PRODUCT"]["time"]
+    ref_time_val = np.datetime64(num2date(ref_time_var[:].item(), ref_time_var.units))
+    dtime_var = dso.groups["PRODUCT"]["delta_time"]
+    dtime = xr.DataArray(dtime_var[:].squeeze(), dims=("y",)).astype("timedelta64[ms]")
 
-    ds["lon"] = xr.DataArray(longitude)
-    ds["lat"] = xr.DataArray(latitude)
+    ds["lon"] = (
+        ("y", "x"),
+        lon_var[:].squeeze(),
+        {"long_name": lon_var.long_name, "units": lon_var.units},
+    )
+    ds["lat"] = (
+        ("y", "x"),
+        lat_var[:].squeeze(),
+        {"long_name": lat_var.long_name, "units": lat_var.units},
+    )
+    ds["time"] = ((), ref_time_val, {"long_name": "reference time"})
+    ds["scan_time"] = ds["time"] + dtime
+    ds["scan_time"].attrs.update({"long_name": "scan time"})
+    ds = ds.set_coords(["lon", "lat", "time", "scan_time"])
+    ds.attrs["reference_time_string"] = ref_time_val.astype(datetime).strftime(r"%Y%m%d")
 
     for varname in variable_dict:
         print(varname)
@@ -63,7 +77,7 @@ def _open_one_dataset(fname, variable_dict):
             maximum = variable_dict[varname]["maximum"]
             values[:][values[:] > maximum] = np.nan
 
-        ds[varname] = xr.DataArray(values)
+        ds[varname] = (("y", "x"), values)
 
         if "quality_flag_min" in variable_dict[varname]:
             ds[varname].attrs["quality_flag"] = varname
@@ -133,10 +147,6 @@ def open_dataset(fnames, variable_dict, debug=False):
     for file in files:
         granule = _open_one_dataset(file, variable_dict)
         apply_quality_flag(granule)
-        granule_str = file.split("/")[-1]
-        granule_info = granule_str.split("____")
-
-        datetime_str = granule_info[1][0:8]
-        granules[datetime_str] = granule
+        granules[granule.attrs["reference_time_string"]] = granule
 
     return granules
