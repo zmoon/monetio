@@ -87,8 +87,8 @@ def _open_one_dataset(fname, variable_dict):
         )
 
         if "quality_flag_min" in variable_dict[varname]:
-            ds[varname].attrs["quality_flag"] = varname
-            ds[varname].attrs["quality_thresh_min"] = variable_dict[varname]["quality_flag_min"]
+            ds.attrs["quality_flag"] = varname
+            ds.attrs["quality_thresh_min"] = variable_dict[varname]["quality_flag_min"]
 
     dso.close()
 
