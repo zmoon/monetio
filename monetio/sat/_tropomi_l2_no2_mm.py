@@ -122,6 +122,12 @@ def open_dataset(fnames, variable_dict, debug=False):
     fnames : str
         Glob expression for input file paths.
     variable_dict : dict
+        Mapping of variable names to a dict of attributes
+        that, if provided, will be used when processing the data
+        (``fillvalue``, ``scale``, ``maximum``, ``minimum``, ``quality_flag_min``).
+        A variable's attribute dict is allowed to be empty (``{}``).
+        Or, instead, you can pass a single variable name as a string
+        or a sequence of variable names.
     debug : bool
         Set logging level to debug.
 
@@ -136,6 +142,13 @@ def open_dataset(fnames, variable_dict, debug=False):
 
     if isinstance(fnames, Path):
         fnames = fnames.as_posix()
+
+    if isinstance(variable_dict, str):
+        variable_dict = {variable_dict: {}}
+    elif isinstance(variable_dict, dict):
+        pass
+    else:  # Assume sequence
+        variable_dict = {varname: {} for varname in variable_dict}
 
     for subpath in fnames.split("/"):
         if "$" in subpath:

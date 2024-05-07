@@ -57,7 +57,7 @@ def test_open_dataset(test_file_path):
     vn = "nitrogendioxide_tropospheric_column"  # mol m-2
     t_ref = pd.Timestamp("2019-07-15")
 
-    ds = open_dataset(test_file_path, {vn: {}})[t_ref.strftime(r"%Y%m%d")]
+    ds = open_dataset(test_file_path, vn)[t_ref.strftime(r"%Y%m%d")]
 
     assert set(ds.coords) == {"time", "lat", "lon", "scan_time"}
     assert set(ds) == {vn}
