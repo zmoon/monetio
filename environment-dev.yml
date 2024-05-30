@@ -19,7 +19,7 @@ dependencies:
   - h5py
   - joblib
   - lxml
-  - pyhdf <0.11
+  - pyhdf!=0.11.3
   - requests
   - timezonefinder
   #
