@@ -16,13 +16,15 @@ dependencies:
   #
   # optional
   - h5netcdf
+  - h5py
   - joblib
   - lxml
-  - pyhdf <0.11
+  - pyhdf!=0.11.3
   - requests
   - timezonefinder
   #
   # test
+  - filelock
   - pytest
   - pytest-xdist
   #
