@@ -436,7 +436,7 @@ class Dataset:
             v = x.replace(self.VAR[i].miss, "NaN")
             if "NaN" in v:
                 v = "NaN"
-            vals.append(float(v.strip())*self.VAR[i].scale)  # multiply with scaling factor
+            vals.append(float(v.strip()) * self.VAR[i].scale)  # multiply with scaling factor
         return vals
 
     def read_data(self):
