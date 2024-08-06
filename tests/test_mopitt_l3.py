@@ -34,7 +34,7 @@ def retrieve_test_file(is_ci=False):
 
 
 @pytest.fixture(scope="module")
-def test_file_path(tmp_path_factory, worker_id):
+def test_file_path(tmp_path_factory, worker_id, is_ci):
     if worker_id == "master":
         # Not executing with multiple workers;
         # let pytest's fixture caching do its job
@@ -49,7 +49,7 @@ def test_file_path(tmp_path_factory, worker_id):
         if p_test.is_file():
             return p_test
         else:
-            p = retrieve_test_file()
+            p = retrieve_test_file(is_ci=is_ci)
             shutil.copy(p, p_test)
             return p_test
 
