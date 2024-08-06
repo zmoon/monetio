@@ -33,7 +33,7 @@ def retrieve_test_file(is_ci=False):
     return p
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def test_file_path(tmp_path_factory, worker_id):
     if worker_id == "master":
         # Not executing with multiple workers;
