@@ -11,13 +11,14 @@ from monetio.sat._mopitt_l3_mm import get_start_time, load_variable, open_datase
 HERE = Path(__file__).parent
 
 
-def retrieve_test_file():
+def retrieve_test_file(is_ci=False):
     fn = "MOP03JM-201701-L3V95.9.3.he5"
 
     # Download to tests/data if not already present
     p = HERE / "data" / fn
     if not p.is_file():
-        warnings.warn(f"Downloading test file {fn} for MOPITT L3 test")
+        if not is_ci:
+            warnings.warn(f"Downloading test file {fn} for MOPITT L3 test")
         import requests
 
         r = requests.get(

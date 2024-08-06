@@ -11,13 +11,14 @@ from monetio.sat._tropomi_l2_no2_mm import open_dataset
 HERE = Path(__file__).parent
 
 
-def retrieve_test_file():
+def retrieve_test_file(is_ci=False):
     fn = "TROPOMI-L2-NO2-20190715.nc"
 
     # Download to tests/data if not already present
     p = HERE / "data" / fn
     if not p.is_file():
-        warnings.warn(f"Downloading test file {fn} for TROPOMI L2 test")
+        if not is_ci:
+            warnings.warn(f"Downloading test file {fn} for TROPOMI L2 test")
         import requests
 
         r = requests.get(

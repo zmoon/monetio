@@ -16,13 +16,14 @@ FNS = [
 ]
 
 
-def retrieve_test_file(i):
+def retrieve_test_file(i, is_ci=False):
     fn = FNS[i]
 
     # Download to tests/data if not already present
     p = HERE / "data" / fn
     if not p.is_file():
-        warnings.warn(f"Downloading test file {fn} for OMPS L3 test")
+        if not is_ci:
+            warnings.warn(f"Downloading test file {fn} for OMPS L3 test")
         import requests
 
         r = requests.get(
