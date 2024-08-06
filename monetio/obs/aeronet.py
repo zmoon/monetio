@@ -53,7 +53,13 @@ def add_local(
 
     # TODO: DRY wrt. class?
     if freq is not None:
-        a.df = a.df.set_index("time").groupby("siteid").resample(freq).mean().reset_index()
+        a.df = (
+            a.df.set_index("time")
+            .groupby("siteid")
+            .resample(freq)
+            .mean(numeric_only=True)
+            .reset_index()
+        )
 
     if detect_dust:
         a.dust_detect()
@@ -165,7 +171,7 @@ def add_data(
         df = pd.concat(dfs, ignore_index=True).drop_duplicates()
         if freq is not None:
             df.index = df.time
-            df = df.groupby("siteid").resample(freq).mean().reset_index()
+            df = df.groupby("siteid").resample(freq).mean(numeric_only=True).reset_index()
         return df.reset_index(drop=True)
     else:
         if not has_joblib and requested_parallel:
@@ -496,7 +502,11 @@ class AERONET:
 
         if freq is not None:
             self.df = (
-                self.df.set_index("time").groupby("siteid").resample(freq).mean().reset_index()
+                self.df.set_index("time")
+                .groupby("siteid")
+                .resample(freq)
+                .mean(numeric_only=True)
+                .reset_index()
             )
 
         if detect_dust:
