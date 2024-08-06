@@ -19,5 +19,5 @@ filterwarnings = [
     "ignore:'cgi' is deprecated and slated for removal in Python 3.13:DeprecationWarning::",
     "ignore:The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.:FutureWarning::",
     "ignore:np.find_common_type is deprecated.:DeprecationWarning:pandas:",
-    "ignore:The current Dask DataFrame implementation is deprecated.:DeprecationWarning:dask.dataframe:",
+    "ignore:The current Dask DataFrame implementation is deprecated.:DeprecationWarning:dask:",
 ]
