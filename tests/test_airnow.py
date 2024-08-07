@@ -1,5 +1,3 @@
-import warnings
-
 import pandas as pd
 import pytest
 
@@ -73,7 +71,7 @@ def test_add_data_daily():
         "yesterday",  # varies
     ],
 )
-def test_check_zero_utc_offsets(date, bad_utcoffset, request, is_ci):
+def test_check_zero_utc_offsets(date, bad_utcoffset, request, printer):
     dates = [date]
 
     case = request.node.callspec.id.split("-")[0]
@@ -96,8 +94,7 @@ def test_check_zero_utc_offsets(date, bad_utcoffset, request, is_ci):
                 f"{len(bad_sites)} sites with zero UTC offset and abs(lon) > 20:\n"
             )
             msg += bad_sites.to_string(index=False)
-            if not is_ci:
-                warnings.warn(msg)
+            printer(msg)
     elif bad_utcoffset == "null":
         if case in {"multiple_bad", "some_bad"}:
             assert df.utcoffset.isnull().sum() > 0
