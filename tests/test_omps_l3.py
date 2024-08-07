@@ -16,14 +16,13 @@ FNS = [
 ]
 
 
-def retrieve_test_file(i, is_ci=False):
+def retrieve_test_file(i):
     fn = FNS[i]
 
     # Download to tests/data if not already present
     p = HERE / "data" / fn
     if not p.is_file():
-        if not is_ci:
-            warnings.warn(f"Downloading test file {fn} for OMPS L3 test")
+        warnings.warn(f"Downloading test file {fn} for OMPS L3 test")
         import requests
 
         r = requests.get(
@@ -39,7 +38,7 @@ def retrieve_test_file(i, is_ci=False):
 
 
 @pytest.fixture(scope="module")
-def test_file_paths(tmp_path_factory, worker_id, is_ci):
+def test_file_paths(tmp_path_factory, worker_id):
     if worker_id == "master":
         # Not executing with multiple workers;
         # let pytest's fixture caching do its job
@@ -54,7 +53,7 @@ def test_file_paths(tmp_path_factory, worker_id, is_ci):
         p_test = root_tmp_dir / f"omps_l3_test_{i}.he5"
         with FileLock(p_test.as_posix() + ".lock"):
             if not p_test.is_file():
-                p = retrieve_test_file(i, is_ci=is_ci)
+                p = retrieve_test_file(i)
                 shutil.copy(p, p_test)
             p_tests.append(p_test)
 
