@@ -225,8 +225,8 @@ def add_lazy_pm25(d):
 
     Returns
     -------
-    type
-        Description of returned object.
+    d: xarray
+        including PM2.5
 
     """
     keys = Series([i for i in d.variables])
@@ -242,6 +242,19 @@ def add_lazy_pm25(d):
 
 
 def add_lazy_pm10(d):
+    """Short summary.
+
+    Parameters
+    ----------
+    d : xarray.Dataset
+
+
+    Returns
+    -------
+    d: xarray
+        including PM10
+
+    """
     keys = Series([i for i in d.variables])
     allvars = Series(np.concatenate([fine, coarse]))
     if "PM_TOT" in keys:
@@ -258,6 +271,19 @@ def add_lazy_pm10(d):
 
 
 def add_lazy_pm_course(d):
+    """Short summary.
+
+    Parameters
+    ----------
+    d : xarray.Dataset
+
+
+    Returns
+    -------
+    d: xarray
+        including Course Mode Partilate Matter
+
+    """
     keys = Series([i for i in d.variables])
     allvars = Series(coarse)
     index = allvars.isin(keys)
@@ -271,6 +297,19 @@ def add_lazy_pm_course(d):
 
 
 def add_lazy_clf(d):
+    """Short summary.
+
+    Parameters
+    ----------
+    d : xarray.Dataset
+
+
+    Returns
+    -------
+    d: xarray
+        including CLF
+
+    """
     keys = Series([i for i in d.variables])
     allvars = Series(["ACLI", "ACLJ", "ACLK"])
     weights = Series([1, 1, 0.2])
@@ -284,6 +323,19 @@ def add_lazy_clf(d):
 
 
 def add_lazy_noy(d):
+    """Short summary.
+
+    Parameters
+    ----------
+    d : xarray.Dataset
+
+
+    Returns
+    -------
+    d: xarray
+        including NOy
+
+    """
     keys = Series([i for i in d.variables])
     allvars = Series(noy_gas)
     index = allvars.isin(keys)
@@ -295,6 +347,19 @@ def add_lazy_noy(d):
 
 
 def add_lazy_nox(d):
+    """Short summary.
+
+    Parameters
+    ----------
+    d : xarray.Dataset
+
+
+    Returns
+    -------
+    d: xarray
+        including NOx
+
+    """
     keys = Series([i for i in d.variables])
     allvars = Series(["NO", "NOX"])
     index = allvars.isin(keys)
@@ -306,6 +371,19 @@ def add_lazy_nox(d):
 
 
 def add_multiple_lazy(dset, variables, weights=None):
+    """Short summary.
+
+    Parameters
+    ----------
+    d : xarray.Dataset
+
+
+    Returns
+    -------
+    d: xarray
+        including multiple variables
+
+    """
     from numpy import ones
 
     if weights is None:
@@ -509,7 +587,6 @@ def _choose_xarray_engine_and_keywords(fname):
             "backend_kwargs": {"format": "uamiv"},
         }
     return keywords
-
 
 
 # Arrays for different gasses and pm groupings
