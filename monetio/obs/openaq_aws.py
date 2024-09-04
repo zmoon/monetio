@@ -107,6 +107,86 @@ def get_paths(dates, *, location_ids=None):
     return paths
 
 
+def get_locs(*, country=None, provider=None):
+    """Get location IDs corresponding to country/countries OR provider(s).
+
+    Returns
+    -------
+    list of str
+    """
+    import re
+
+    import s3fs
+
+    if country is not None and provider is not None:
+        raise ValueError("cannot specify both `country` and `provider`")
+
+    print("discovering locations...")
+    fs = s3fs.S3FileSystem(anon=True)
+    if country is not None:
+        if pd.api.types.is_scalar(country):
+            countries = [country]
+        else:
+            countries = country
+
+        paths = []
+        for cntry in countries:
+            cntry_paths = fs.find(
+                f"openaq-data-archive/records/csv.gz/country={cntry.lower()}/",
+                withdirs=True,
+                maxdepth=1,
+            )
+            paths.extend(cntry_paths)
+
+        locs = []
+        for p in paths:
+            m = re.fullmatch(
+                r"openaq-data-archive/records/csv\.gz/country=([a-z]{2}|\-\-|99)/"
+                r"locationid=([0-9]+)",
+                p,
+            )
+            if m is not None:
+                locs.append(m.group(2))
+
+    elif provider is not None:
+        if pd.api.types.is_scalar(provider):
+            providers = [provider]
+        else:
+            providers = provider
+
+        paths = []
+        for prvdr in providers:
+            prvdr_paths = fs.find(
+                f"openaq-data-archive/records/csv.gz/provider={prvdr.lower()}/",
+                withdirs=True,
+                maxdepth=2,
+            )
+            paths.extend(prvdr_paths)
+
+        locs = []
+        for p in paths:
+            m = re.fullmatch(
+                r"openaq-data-archive/records/csv\.gz/provider=([a-z0-9\-]+)/"
+                r"country=([a-z]{2}|\-\-|99)/locationid=([0-9]+)",
+                p,
+            )
+            if m is not None:
+                locs.append(m.group(3))
+
+    else:  # All locs
+        paths = fs.find("openaq-data-archive/records/csv.gz/", withdirs=True, maxdepth=1)
+        locs = []
+        for p in paths:
+            m = re.fullmatch(r"openaq-data-archive/records/csv\.gz/locationid=([0-9]+)", p)
+            if m is not None:
+                locs.append(m.group(1))
+
+    if not locs:
+        warnings.warn(f"no locations found for country={country!r} provider={provider!r}")
+
+    return sorted(locs)
+
+
 def add_data(
     dates,
     *,
