@@ -65,7 +65,14 @@ def read(fp):
     return df
 
 
-def get_paths(dates, *, location_ids=None, providers=None):
+def _maybe_to_list(x):
+    if x is not None and pd.api.types.is_scalar(x):
+        return [x]
+    else:
+        return x
+
+
+def get_paths(dates, *, location_id=None, provider=None):
     """
     Parameters
     ----------
@@ -74,6 +81,9 @@ def get_paths(dates, *, location_ids=None, providers=None):
     import s3fs
 
     fs = s3fs.S3FileSystem(anon=True)
+
+    location_ids = _maybe_to_list(location_id)
+    providers = _maybe_to_list(provider)
 
     if location_ids is None and providers is None:
         warnings.warn(
@@ -240,20 +250,10 @@ def add_data(
     if dates.empty:
         raise ValueError("must provide at least one datetime-like")
 
-    if location_id is not None and pd.api.types.is_scalar(location_id):
-        location_ids = [location_id]
-    else:
-        location_ids = location_id
-
-    if provider is not None and pd.api.types.is_scalar(provider):
-        providers = [provider]
-    else:
-        providers = provider
-
     if country is not None:
         raise NotImplementedError("selection by country not yet implemented")
 
-    paths = get_paths(dates, location_ids=location_ids, providers=providers)
+    paths = get_paths(dates, location_id=location_id, provider=provider)
     print(f"found {len(paths)}")
     uris = [f"s3://{p}" for p in paths]
 
