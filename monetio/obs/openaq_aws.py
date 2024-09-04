@@ -93,9 +93,16 @@ def get_paths(dates, *, location_ids=None):
     for date in dates.floor("D").unique():
         for loc in location_ids:
             glb = tpl.format(loc=loc, date=date)
-            loc_date_paths = fs.glob(glb)
-            logger.debug(f"found {len(loc_date_paths)} path(s) for glob='{glb}'")
-            paths.extend(loc_date_paths)
+            if "*" in glb:
+                loc_date_paths = fs.glob(glb)
+                logger.debug(f"found {len(loc_date_paths)} path(s) for glob='{glb}'")
+                paths.extend(loc_date_paths)
+            else:
+                if fs.exists(glb):
+                    logger.debug(f"path exists: {glb}")
+                    paths.append(glb)
+                else:
+                    logger.debug(f"path does not exist: {glb}")
 
     return paths
 
