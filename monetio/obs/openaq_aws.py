@@ -65,7 +65,7 @@ def read(fp):
     return df
 
 
-def get_paths(dates, *, location_ids=None):
+def get_paths(dates, *, location_ids=None, providers=None):
     """
     Parameters
     ----------
@@ -75,36 +75,54 @@ def get_paths(dates, *, location_ids=None):
 
     fs = s3fs.S3FileSystem(anon=True)
 
-    if location_ids is None:
+    if location_ids is None and providers is None:
         warnings.warn(
             "location ID(s) not provided; using all locations, which may be quite slow",
             stacklevel=2,
         )
         location_ids = ["*"]
 
-    tpl = (
-        "openaq-data-archive/records/csv.gz/"
-        "locationid={loc}/year={date:%Y}/month={date:%m}/"
-        "location-{loc}-{date:%Y%m%d}.csv.gz"
-    )
+    unique_dates = dates.floor("D").unique()
 
     print("discovering paths...")
     paths = []
-    for date in dates.floor("D").unique():
-        for loc in location_ids:
-            glb = tpl.format(loc=loc, date=date)
-            if "*" in glb:
-                loc_date_paths = fs.glob(glb)
-                logger.debug(f"found {len(loc_date_paths)} path(s) for glob='{glb}'")
-                paths.extend(loc_date_paths)
-            else:
-                if fs.exists(glb):
-                    logger.debug(f"path exists: {glb}")
-                    paths.append(glb)
-                else:
-                    logger.debug(f"path does not exist: {glb}")
 
-    return paths
+    if location_ids is not None:
+        tpl = (
+            "openaq-data-archive/records/csv.gz/"
+            "locationid={loc}/year={date:%Y}/month={date:%m}/"
+            "location-{loc}-{date:%Y%m%d}.csv.gz"
+        )
+        for date in unique_dates:
+            for loc in location_ids:
+                glb = tpl.format(loc=loc, date=date)
+                if "*" in glb:
+                    loc_date_paths = fs.glob(glb)
+                    logger.debug(f"found {len(loc_date_paths)} path(s) for glob='{glb}'")
+                    paths.extend(loc_date_paths)
+                else:
+                    if fs.exists(glb):
+                        logger.debug(f"path exists: {glb}")
+                        paths.append(glb)
+                    else:
+                        logger.debug(f"path does not exist: {glb}")
+
+    if providers is not None:
+        tpl = (
+            "openaq-data-archive/records/csv.gz/"
+            "provider={prvdr}/country={cntry}/locationid={loc}/"
+            "year={date:%Y}/month={date:%m}/"
+            "location-{loc}-{date:%Y%m%d}.csv.gz"
+        )
+        for date in unique_dates:
+            for prvdr in providers:
+                glb = tpl.format(prvdr=prvdr.lower(), cntry="*", loc="*", date=date)
+                print(glb)
+                prvdr_date_paths = fs.glob(glb)
+                logger.debug(f"found {len(prvdr_date_paths)} path(s) for glob='{glb}'")
+                paths.extend(prvdr_date_paths)
+
+    return sorted(set(paths))
 
 
 def get_locs(*, country=None, provider=None):
@@ -222,15 +240,20 @@ def add_data(
     if dates.empty:
         raise ValueError("must provide at least one datetime-like")
 
-    if pd.api.types.is_scalar(location_id):
+    if location_id is not None and pd.api.types.is_scalar(location_id):
         location_ids = [location_id]
     else:
         location_ids = location_id
 
-    if country is not None or provider is not None:
-        raise NotImplementedError("selection by location/country/provider not yet implemented")
+    if provider is not None and pd.api.types.is_scalar(provider):
+        providers = [provider]
+    else:
+        providers = provider
 
-    paths = get_paths(dates, location_ids=location_ids)
+    if country is not None:
+        raise NotImplementedError("selection by country not yet implemented")
+
+    paths = get_paths(dates, location_ids=location_ids, providers=providers)
     print(f"found {len(paths)}")
     uris = [f"s3://{p}" for p in paths]
 
