@@ -72,7 +72,7 @@ def _maybe_to_list(x):
         return x
 
 
-def get_paths(dates, *, location_id=None, provider=None):
+def get_paths(dates, *, location_id=None, country=None, provider=None):
     """
     Parameters
     ----------
@@ -84,8 +84,9 @@ def get_paths(dates, *, location_id=None, provider=None):
 
     location_ids = _maybe_to_list(location_id)
     providers = _maybe_to_list(provider)
+    countries = _maybe_to_list(country)
 
-    if location_ids is None and providers is None:
+    if location_ids is None and providers is None and countries is None:
         warnings.warn(
             "location ID(s) not provided; using all locations, which may be quite slow",
             stacklevel=2,
@@ -127,16 +128,32 @@ def get_paths(dates, *, location_id=None, provider=None):
         for date in unique_dates:
             for prvdr in providers:
                 glb = tpl.format(prvdr=prvdr.lower(), cntry="*", loc="*", date=date)
-                print(glb)
                 prvdr_date_paths = fs.glob(glb)
                 logger.debug(f"found {len(prvdr_date_paths)} path(s) for glob='{glb}'")
                 paths.extend(prvdr_date_paths)
+
+    if countries is not None:
+        tpl = (
+            "openaq-data-archive/records/csv.gz/"
+            "country={cntry}/locationid={loc}/"
+            "year={date:%Y}/month={date:%m}/"
+            "location-{loc}-{date:%Y%m%d}.csv.gz"
+        )
+        for date in unique_dates:
+            for cntry in countries:
+                glb = tpl.format(cntry=cntry.lower(), loc="*", date=date)
+                print(glb)
+                cntry_date_paths = fs.glob(glb)
+                logger.debug(f"found {len(cntry_date_paths)} path(s) for glob='{glb}'")
+                paths.extend(cntry_date_paths)
 
     return sorted(set(paths))
 
 
 def get_locs(*, country=None, provider=None):
     """Get location IDs corresponding to country/countries OR provider(s).
+
+    Default: all locations.
 
     Returns
     -------
@@ -232,7 +249,7 @@ def add_data(
     location_id : str or int or list, optional
         Location ID(s) to include.
     country : str or list of str, optional
-        Country or countries to include.
+        Country or countries to include. 2-character ISO country codes.
     provider : str or list of str, optional
         Data provider(s) to include.
 
@@ -250,10 +267,7 @@ def add_data(
     if dates.empty:
         raise ValueError("must provide at least one datetime-like")
 
-    if country is not None:
-        raise NotImplementedError("selection by country not yet implemented")
-
-    paths = get_paths(dates, location_id=location_id, provider=provider)
+    paths = get_paths(dates, location_id=location_id, country=country, provider=provider)
     print(f"found {len(paths)}")
     uris = [f"s3://{p}" for p in paths]
 
